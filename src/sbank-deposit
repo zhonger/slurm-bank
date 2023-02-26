@@ -26,7 +26,8 @@ cmd_deposit()
 	debug "define some variables"
 	DEFINE_string 'account' 'null' 'specify a slurm account' 'a'
 	DEFINE_string 'cluster' 'null' 'specify a cluster' 'c'
-	DEFINE_integer 'time' '0' 'specify time in hours' 't'
+	# DEFINE_integer 'time' '0' 'specify time in hours' 't'
+	DEFINE_float 'time' '0.00' 'specify time in hours' 't'
 
 	FLAGS_PARENT="sbank deposit"
 
@@ -41,20 +42,30 @@ cmd_deposit()
 	[ ${FLAGS_account} = 'null' ] && die "${FLAGS_account}" "is not an account, no account specified"
 
 	debug "${FLAGS_account} is the account to be deposited"
-	debug "$((${FLAGS_time} * 60 ))mins to be deposited"
+	# debug "$((${FLAGS_time} * 60 ))mins to be deposited"
+	debug "$(echo "$FLAGS_time * 60" | bc ))mins to be deposited"
 
 
-	if [ "${FLAGS_time}" -gt "0" ];
-	then
+	# if [ "${FLAGS_time}" -gt "0" ];
+	# then
 		# the account limit - this could be re-worked in a more clever way and check for exitcodes
-		LIMIT=$($SACCTMGR -np list associations cluster=${FLAGS_cluster} format=account,GrpCPUMins account=${FLAGS_account} | head -1 | awk -F'|' '{print $2}')
-		debug "${LIMIT}mins is the limit of ${FLAGS_account} on ${FLAGS_cluster}"
+		# LIMIT=$($SACCTMGR -np list associations cluster=${FLAGS_cluster} format=account,GrpCPUMins account=${FLAGS_account} | head -1 | awk -F'|' '{print $2}')
+		# debug "${LIMIT}mins is the limit of ${FLAGS_account} on ${FLAGS_cluster}"
 
 		# new limit is the old limit +/- a delta
-		NEW_LIMIT=$((${LIMIT} + (${FLAGS_time} * 60)))
-		debug "Updating account with the following (${FLAGS_time}hrs * 60) + ${LIMIT}mins = ${NEW_LIMIT} mins"
-		$SACCTMGR -i modify account account=${FLAGS_account} set GrpCPUMins=${NEW_LIMIT} where cluster=${FLAGS_cluster}
+		# NEW_LIMIT=$((${LIMIT} + (${FLAGS_time} * 60)))
+		# debug "Updating account with the following (${FLAGS_time}hrs * 60) + ${LIMIT}mins = ${NEW_LIMIT} mins"
+		# $SACCTMGR -i modify account account=${FLAGS_account} set GrpCPUMins=${NEW_LIMIT} where cluster=${FLAGS_cluster}
+	# fi
+	LIMIT=`$SACCTMGR -np list associations cluster=${FLAGS_cluster} format=account,GrpCPUMins account=${FLAGS_account} | head -1 | awk -F'|' '{print $2}'`
+    debug "${LIMIT}mins is the limit of ${FLAGS_account} on ${FLAGS_cluster}"
+    NEW_LIMIT=$(echo "$LIMIT + $FLAGS_time * 60" | bc)
+	if [ $(expr $NEW_LIMIT \< 0.00) == 1 ];
+	then
+			NEW_LIMIT=0.00
 	fi
+	debug "Updating account with the following (${FLAGS_time}hrs * 60) + ${LIMIT}mins = ${NEW_LIMIT} mins (Minimum is 0)"
+	$SACCTMGR -i modify account account=${FLAGS_account} set GrpCPUMins=${NEW_LIMIT} where cluster=${FLAGS_cluster}
 }
 
 cmd_help()

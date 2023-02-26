@@ -138,17 +138,18 @@ cmd_calc()
 	float=$(echo "scale=2; ($days*86400 + $hours*3600 + $mins*60 + $secs) / 3600" | bc)
 	# and call printf because bc doesn't round numbers!
 	debug "rounded to the nearest hour:"
-	wallhours=$(printf "%.0f\n" $float)
+	wallhours=$(printf "%.2f\n" $float)
 
 	# final check - if it has been rounded down to 0 wall hours, make it 1 (this is only
 	# an estimate anyway
-	if [[ $wallhours -eq "0" ]]
-	then
-		debug "rounding up from 0 hours to 1 hour"
-		echo "1"
-	else
-		echo "$wallhours"
-	fi
+	# if [[ $wallhours -eq "0" ]]
+	# then
+	# 	debug "rounding up from 0 hours to 1 hour"
+	# 	echo "1"
+	# else
+	# 	echo "$wallhours"
+	# fi
+	echo "$wallhours"
 }
 
 cmd_estimate()
@@ -158,7 +159,7 @@ cmd_estimate()
 	DEFINE_integer 'ntasks' '' 'specify a total number of tasks, conflicts with nodes' 'n'
 	DEFINE_integer 'nodes' '' 'specify a total number of nodes, conflicts with ntasks' 'N'
 	DEFINE_integer 'cores' '0' 'specify a total number of cores per node' 'c'
-	DEFINE_integer 'time' '0' 'specify a total hours (Walltime)' 't'
+	DEFINE_integer 'time' '0.00' 'specify a total hours (Walltime)' 't'
 
 	FLAGS_PARENT="sbank time estimate"
 
@@ -179,12 +180,14 @@ cmd_estimate()
 		die "Please specify either --nodes or --ntasks"
 	fi
 
-	[ "${FLAGS_time}" -le "0" ] && die "time must be greater than 0"
+	# [ "${FLAGS_time}" -le "0" ] && die "time must be greater than 0"
+	[ $(expr $FLAGS_time \> 0.00) == 0 ] && die "time must be greater than 0"
 
 	if [  -n "${FLAGS_ntasks}" ];
 	then
 		[ "${FLAGS_ntasks}" -le "0" ] && die "ntasks must be greater than 0"
-		printf "$(( ${FLAGS_ntasks} * ${FLAGS_time} ))\n"
+		# printf "$(( ${FLAGS_ntasks} * ${FLAGS_time} ))\n"
+		echo "scale=2; ${FLAGS_ntasks} * ${FLAGS_time}" | bc
 	else
 		[ "${FLAGS_nodes}" -le "0" ] && die "nodes must be greater than 0"
 		if [ "${FLAGS_cores}" -le "0" ]
@@ -192,7 +195,8 @@ cmd_estimate()
 			FLAGS_cores=$($SLURMBANK_DIR/sbank cluster cpupernode)
 			warn "no cores-per-node specified - estimating $cpus"
 		fi
-		printf "$(( ${FLAGS_nodes} * ${FLAGS_cores} * ${FLAGS_time} ))\n"
+		# printf "$(( ${FLAGS_nodes} * ${FLAGS_cores} * ${FLAGS_time} ))\n"
+		echo "scale=2; ${FLAGS_nodes} * ${FLAGS_cores} * ${FLAGS_time}" | bc
 	fi
 }
 
@@ -268,7 +272,7 @@ cmd_estimatescript()
 
 	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
 	then
-		printf "Requested hours = %'d\n" ${cpu_hours}
+		printf "Requested hours = %'.2f\n" ${cpu_hours}
 	else
 		printf "%d\n" ${cpu_hours}
 	fi

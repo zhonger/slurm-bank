@@ -85,7 +85,7 @@ cmd_request()
 	debug "define some variables"
 	DEFINE_string 'account' '' 'specify a slurm account' 'a'
 	DEFINE_string 'cluster' '' 'specify a cluster' 'c'
-	DEFINE_integer 'time' '0' 'specify time in hours' 't'
+	DEFINE_integer 'time' '0.00' 'specify time in hours' 't'
 	DEFINE_boolean 'verbose' false 'verbose output, including current balance, requested hours and expected balance' 'v'
 
 	FLAGS_PARENT="sbank balance request"
@@ -94,7 +94,8 @@ cmd_request()
 	debug "parse command line"
 	parse_args "$@"
 
-	[ "${FLAGS_time}" -le "0" ] && die "time must be greater than 0"
+	# [ "${FLAGS_time}" -le "0" ] && die "time must be greater than 0"
+	[ $(expr $FLAGS_time \> 0.00) == 0 ] && die "time must be greater than 0"
 
 	# if no account, look for default
 	#[ "${FLAGS_account}" = "" ]  && die "must specify account"
@@ -129,17 +130,19 @@ cmd_request()
 
 	if [ ${FLAGS_verbose} -eq ${FLAGS_TRUE} ]
 	then
-		printf "%-20s = %'10d\n" "Current balance" ${balance_initial}
-		printf "%-20s = %'10d\n" "Requested hours" ${FLAGS_time}
-		if [ "${balance_post}" -gt "0" ]
+		printf "%-20s = %'10.2f\n" "Current balance" ${balance_initial}
+		printf "%-20s = %'10.2f\n" "Requested hours" ${FLAGS_time}
+		# if [ "${balance_post}" -gt "0" ]
+		if [ $(expr $balance_post \> 0.00) == 1]
 		then
-			printf "%-20s = %'10d\n" "Expected balance" ${balance_post}
+			printf "%-20s = %'10.2f\n" "Expected balance" ${balance_post}
 		else
-			printf "%-20s = %'10d  <= warning: job won't run sucessfully\n" "Expected balance" ${balance_post}
+			printf "%-20s = %'10.2f  <= warning: job won't run sucessfully\n" "Expected balance" ${balance_post}
 		fi
 	else
 
-		if [ "${balance_post}" -gt "0" ]
+		# if [ "${balance_post}" -gt "0" ]
+		if [ $(expr $balance_post \> 0.00) == 1 ]
 		then
 			echo ${balance_post}
 		else
